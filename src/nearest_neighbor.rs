@@ -1,5 +1,4 @@
-use rulinalg::matrix::BaseMatrix;
-use rulinalg::matrix::Matrix;
+use rulinalg::matrix::{Matrix, BaseMatrix};
 use rulinalg::vector::Vector;
 
 use model::Supervised;
@@ -14,6 +13,11 @@ use model::Supervised;
 /// is a feature. Similarly, the training labels should be a row
 /// vector with M elements (one label per training example) that
 /// are unsigned integers.
+///
+/// TODO:
+/// - Implement k-nearest neighbor
+/// - Hyperparameter (k) tuning use a single validation set or
+///   a more sophisticated technique (cross-validation)
 pub struct NearestNeighbor {
     pub k: u32,
     xtr: Option<Matrix<f64>>,

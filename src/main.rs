@@ -1,6 +1,6 @@
+#![allow(dead_code)]
 extern crate rulinalg;
-use rulinalg::matrix::BaseMatrix;
-use rulinalg::matrix::Matrix;
+use rulinalg::matrix::{Axes, Matrix, BaseMatrix};
 use rulinalg::vector::Vector;
 
 use std::error::Error;
@@ -11,54 +11,61 @@ use std::path::Path;
 
 mod model;
 mod nearest_neighbor;
+mod neural_network;
 
 use model::Supervised;
 use nearest_neighbor::NearestNeighbor;
 
+/// A helper function for loading and parsing the CIFAR-10 dataset. The dataset
+/// is comprised of five "batches" (binary files) of training data and one batch
+/// of test data.
+///
 /// The first byte is the label of the first image, which is a number in the
 /// range 0-9. The next 3072 bytes are the values of the pixels of the image.
 /// The first 1024 bytes are the red channel values, the next 1024 the green,
 /// and the final 1024 the blue. The values are stored in row-major order, so
 /// the first 32 bytes are the red channel values of the first row of the image.
-fn load_dataset(path: &str) -> std::io::Result<(Matrix<f64>, Vector<u8>)> {
-    let mut file = File::open(path)?;
+fn load_cifar(path_to_binaries: &str) -> std::io::Result<(Matrix<f64>, Vector<u8>)> {
     let mut contents = Vec::new();
-    file.read_to_end(&mut contents)?;
 
-    let all_examples = Matrix::new(10000, 3073, contents);
-
-    let xtr = match all_examples.select_cols(&[1, 3072]).try_into::<f64>() {
-        Ok(m) => m,
-        Err(e) => panic!("Failed to convert training data into floating point format"),
-    };
-    let ytr = Vector::<u8>::from(all_examples.col(0));
-
-    for i in 0..10000 {
-        println!("{}: {}", ytr[i], xtr.row(i)[0]);
+    for i in 1..6 {
+        let path = format!("{}data_batch_{}.bin", path_to_binaries, i);
+        let mut file = File::open(path)?;
+        file.read_to_end(&mut contents)?;
     }
+
+    // 10000 entries per binary, 5 binaries
+    // Each entry is a 3073 element vector, where the first element is the label
+    const NUMBER_OF_ENTRIES: usize = 50000;
+    const LENGTH_OF_ENTRY: usize = 3073;
+
+    let all_examples = Matrix::new(NUMBER_OF_ENTRIES, LENGTH_OF_ENTRY, contents);
+
+    // Grab all of the columns (except the first) of the composite matrix and convert the
+    // data into a floating point format
+    let xtr = all_examples.split_at(1, Axes::Col).1.into_matrix().try_into::<f64>().unwrap();
+
+    // Extract the first column of the composite matrix, which corresponds
+    // to all of the labels of the training set
+    let ytr = Vector::<u8>::from(all_examples.col(0));
 
     Ok((xtr, ytr))
 }
 
 fn main() {
 
-    match load_dataset("../cifar-10/data_batch_1.bin") {
+    /*
+    let (cifar_data, cifar_labels) = match load_cifar("../cifar-10/") {
         Err(why) => panic!("{:?}", why),
-        Ok(_) => println!("Loaded dataset"),
-    }
+        Ok((xtr, ytr)) => (xtr, ytr)
+    };
 
-    // Training data and labels
-    let xtr = Matrix::new(3, 2, vec![1.0, 2.0,
-                                            3.0, 4.0,
-                                            5.0, 6.0]);
-    let ytr = Vector::new(vec![0, 1, 2]);
-
-    // Test data
-    let xte = Matrix::new(2, 2, vec![1.0, 2.0,
-                                           3.0, 4.0]);
+    println!("{} x {}", cifar_data.rows(), cifar_data.cols());
 
     // Create and train the classifier
     let mut knn = NearestNeighbor::new(3);
     knn.train(&xtr, &ytr);
     knn.predict(&xte);
+    */
+
 }

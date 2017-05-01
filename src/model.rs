@@ -6,11 +6,11 @@
 /// predicted from the data. The `predict` function takes new
 /// data and predicts labels.
 pub trait Supervised<T, U> {
-    fn train(&mut self, train_data: &T, train_labels: &U);
-    fn predict(&self, test_data: &T) -> U;
+    fn train(&mut self, xtr: &T, ytr: &U);
+    fn predict(&self, xte: &T) -> U;
 }
 
 pub trait Unsupervised<T, U> {
-    fn train(&mut self, train_data: &T);
-    fn predict(&self, test_data: &T) -> U;
+    fn train(&mut self, xtr: &T);
+    fn predict(&self, xte: &T) -> U;
 }

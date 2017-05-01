@@ -1,0 +1,1 @@
+C:\Users\michael.walczyk\Documents\Spectrum\machina-rs\target\release\machina-rs.exe: C:\Users\michael.walczyk\Documents\Spectrum\machina-rs\src\nearest_neighbor.rs C:\Users\michael.walczyk\Documents\Spectrum\machina-rs\src\neural_network.rs C:\Users\michael.walczyk\Documents\Spectrum\machina-rs\src\model.rs C:\Users\michael.walczyk\Documents\Spectrum\machina-rs\src\main.rs
