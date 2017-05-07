@@ -1,7 +1,10 @@
 #![allow(dead_code)]
 extern crate rulinalg;
-use rulinalg::matrix::{Axes, Matrix, BaseMatrix};
+use rulinalg::matrix::{Axes, Matrix, BaseMatrix, BaseMatrixMut};
 use rulinalg::vector::Vector;
+use rulinalg::io::csv::Reader;
+
+extern crate rand;
 
 use std::error::Error;
 use std::fs::File;
@@ -15,6 +18,7 @@ mod neural_network;
 
 use model::Supervised;
 use nearest_neighbor::NearestNeighbor;
+use neural_network::NeuralNetwork;
 
 /// A helper function for loading and parsing the CIFAR-10 dataset. The dataset
 /// is comprised of five "batches" (binary files) of training data and one batch
@@ -25,7 +29,7 @@ use nearest_neighbor::NearestNeighbor;
 /// The first 1024 bytes are the red channel values, the next 1024 the green,
 /// and the final 1024 the blue. The values are stored in row-major order, so
 /// the first 32 bytes are the red channel values of the first row of the image.
-fn load_cifar(path_to_binaries: &str) -> std::io::Result<(Matrix<f64>, Vector<u8>)> {
+/*fn load_cifar(path_to_binaries: &str) -> std::io::Result<(Matrix<f64>, Vector<u8>)> {
     let mut contents = Vec::new();
 
     for i in 1..6 {
@@ -50,9 +54,46 @@ fn load_cifar(path_to_binaries: &str) -> std::io::Result<(Matrix<f64>, Vector<u8
     let ytr = Vector::<u8>::from(all_examples.col(0));
 
     Ok((xtr, ytr))
-}
+}*/
 
 fn main() {
+    let rdr = Reader::from_file("../mnist/mnist_test_10.csv").unwrap().has_headers(false);
+    let mnist = Matrix::<f64>::read_csv(rdr).unwrap();
+    println!("MNIST dimensions: {} x {}", mnist.rows(), mnist.cols());
+    let (labels_slice, data_slice) = mnist.split_at(1, Axes::Col);
+    let mut xtr = data_slice.into_matrix();
+    let labels = labels_slice.into_matrix();
+    println!("\nTraining label dimensions: {} x {}\n{}", labels.rows(), labels.cols(), labels);
+
+    // Normalize RGB data
+    xtr = xtr.apply(&|x| { x / 255.0 * 0.99 });
+    xtr = xtr.transpose();
+
+    for (i, training_example) in xtr.col_iter().enumerate() {
+        let mut ytr = Matrix::<f64>::zeros(labels.rows(), 1) + 0.01;
+        let class_index = labels[[i as usize, 0]] as usize;
+        ytr[[class_index, 0]] = 0.99;
+
+        println!("\nTraining data #{}:\n{}", i, ytr);
+    }
+
+    let inputs = 4;
+    let hidden = 3;
+    let outputs = 3;
+    let learning_rate = 0.3;
+    let mut ann = NeuralNetwork::new(inputs, hidden, outputs, learning_rate);
+    return;
+
+    println!("\nStarting weights: inputs -> hidden");
+    println!("{}", ann.weights_ih);
+
+    println!("\nStarting weights: hidden -> outputs");
+    println!("{}", ann.weights_ho);
+
+    println!("------------------------------------------------");
+    let xtr = Matrix::new(4, 1, vec![1.0, 2.0, 3.0, 4.0]);
+    let ytr = Matrix::new(3, 1, vec![1.0, 0.0, 0.0]);
+    ann.train(&xtr, &ytr);
 
     /*
     let (cifar_data, cifar_labels) = match load_cifar("../cifar-10/") {

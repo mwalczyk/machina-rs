@@ -4,4 +4,5 @@ version = "0.1.0"
 authors = ["Michael Walczyk <mwalczyk2@gmail.com>"]
 
 [dependencies]
-rulinalg = "0.4.2"
+rulinalg = { version = "0.4.2", features = ["io"] }
+rand = "0.3.15"
