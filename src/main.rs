@@ -2,7 +2,7 @@
 extern crate rulinalg;
 use rulinalg::matrix::{Axes, Matrix, BaseMatrix, BaseMatrixMut};
 use rulinalg::vector::Vector;
-use rulinalg::io::csv::Reader;
+use rulinalg::io::csv::{Reader, Writer};
 
 extern crate rand;
 
@@ -56,57 +56,75 @@ use neural_network::NeuralNetwork;
     Ok((xtr, ytr))
 }*/
 
-fn main() {
-    let rdr = Reader::from_file("../mnist/mnist_test_10.csv").unwrap().has_headers(false);
+fn load_mnist(path: &str) -> (Matrix<f64>, Matrix<f64>) {
+    let rdr = Reader::from_file(path).unwrap().has_headers(false);
     let mnist = Matrix::<f64>::read_csv(rdr).unwrap();
-    println!("MNIST dimensions: {} x {}", mnist.rows(), mnist.cols());
+
+    println!("Loading MNIST data from: {}", path);
+    println!("Dimensions: {} x {}", mnist.rows(), mnist.cols());
+
+    // Set up matrices
     let (labels_slice, data_slice) = mnist.split_at(1, Axes::Col);
-    let mut xtr = data_slice.into_matrix();
+    let mut data = data_slice.into_matrix();
     let labels = labels_slice.into_matrix();
-    println!("\nTraining label dimensions: {} x {}\n{}", labels.rows(), labels.cols(), labels);
 
     // Normalize RGB data
-    xtr = xtr.apply(&|x| { x / 255.0 * 0.99 });
-    xtr = xtr.transpose();
+    data = data.apply(&|x| { x / 255.0 * 0.99 });
+    data = data.transpose();
 
-    for (i, training_example) in xtr.col_iter().enumerate() {
-        let mut ytr = Matrix::<f64>::zeros(labels.rows(), 1) + 0.01;
-        let class_index = labels[[i as usize, 0]] as usize;
-        ytr[[class_index, 0]] = 0.99;
+    (data, labels)
+}
 
-        println!("\nTraining data #{}:\n{}", i, ytr);
-    }
+fn main() {
+    let (data, labels) = load_mnist("../mnist/mnist_train.csv");
 
-    let inputs = 4;
-    let hidden = 3;
-    let outputs = 3;
+    // Configure the neural network
+    let inputs = 784;
+    let hidden = 100;
+    let outputs = 10;
     let learning_rate = 0.3;
     let mut ann = NeuralNetwork::new(inputs, hidden, outputs, learning_rate);
-    return;
 
-    println!("\nStarting weights: inputs -> hidden");
-    println!("{}", ann.weights_ih);
+    println!("\nStarting training...");
 
-    println!("\nStarting weights: hidden -> outputs");
-    println!("{}", ann.weights_ho);
+    for (i, xtr) in data.col_iter().enumerate() {
+        let mut ytr = Matrix::<f64>::zeros(outputs, 1) + 0.01;
 
-    println!("------------------------------------------------");
-    let xtr = Matrix::new(4, 1, vec![1.0, 2.0, 3.0, 4.0]);
-    let ytr = Matrix::new(3, 1, vec![1.0, 0.0, 0.0]);
-    ann.train(&xtr, &ytr);
+        // A number in the range 0..9 corresponding to the class/label of
+        // this training example
+        let actual_class = labels[[i, 0]] as usize;
 
-    /*
-    let (cifar_data, cifar_labels) = match load_cifar("../cifar-10/") {
-        Err(why) => panic!("{:?}", why),
-        Ok((xtr, ytr)) => (xtr, ytr)
-    };
+        ytr[[actual_class, 0]] = 0.99;
 
-    println!("{} x {}", cifar_data.rows(), cifar_data.cols());
+        ann.train(&(xtr.into_matrix()), &ytr);
+    }
 
-    // Create and train the classifier
-    let mut knn = NearestNeighbor::new(3);
-    knn.train(&xtr, &ytr);
-    knn.predict(&xte);
-    */
+    let mut score_card: Vec<u32> = Vec::new();
+    let (d_test, l_test) = load_mnist("../mnist/mnist_test.csv");
+    for (i, xte) in d_test.col_iter().enumerate() {
+        let actual_class = l_test[[i, 0]] as usize;
+        let ypred = Vector::from( ann.predict(&xte.into_matrix()).col(0) );
+        let predicted_class = ypred.argmax().0;
 
+        // If the neural network predicted the correct class, append
+        // a `1` to the list. Otherwise, append a `0`.
+        if actual_class == predicted_class {
+            score_card.push(1);
+        }
+        else {
+            score_card.push(0);
+        }
+    }
+
+    // Calculate the performance score
+    let sum: u32 = score_card.iter().sum();
+    let score: f64 = sum as f64 / score_card.len() as f64;
+    println!("Final score: {}", score);
+
+    // Save weight matrices
+    let mut wtr = Writer::from_file("./weights_ih.csv").unwrap();
+    ann.weights_ih.write_csv(&mut wtr).unwrap();
+
+    wtr = Writer::from_file("./weights_ho.csv").unwrap();
+    ann.weights_ho.write_csv(&mut wtr).unwrap();
 }

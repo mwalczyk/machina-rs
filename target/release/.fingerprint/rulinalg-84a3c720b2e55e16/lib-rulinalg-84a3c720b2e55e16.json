@@ -1,0 +1,1 @@
+{"rustc":15609901798300224030,"features":"[\"csv\", \"io\", \"rustc-serialize\"]","target":879216785007400814,"profile":8410117760005530537,"deps":[["csv v0.14.7",744772113515819024],["matrixmultiply v0.1.13",15764163796813403039],["num v0.1.37",9887279392867002171],["rustc-serialize v0.3.24",12509716821635608854]],"local":{"Precalculated":"0.4.2"},"rustflags":[]}

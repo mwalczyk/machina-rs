@@ -53,15 +53,12 @@ impl NeuralNetwork {
 
         // Each entry w_ij represents the weight between the i-th neuron in the input
         // layer and the j-th neuron in the hidden layer
-        let weights_ih: Matrix<f64> = Matrix::from_fn(hidden, inputs, |c, r| {
-            //normal_ih.ind_sample(&mut rand::thread_rng())
-            1.0
+        let weights_ih: Matrix<f64> = Matrix::from_fn(hidden, inputs, |_, _| {
+            normal_ih.ind_sample(&mut rand::thread_rng())
         });
 
-        let weights_ho: Matrix<f64> = Matrix::from_fn(outputs, hidden, |c, r
-            | {
-            //normal_ho.ind_sample(&mut rand::thread_rng())
-            1.0
+        let weights_ho: Matrix<f64> = Matrix::from_fn(outputs, hidden, |_, _| {
+            normal_ho.ind_sample(&mut rand::thread_rng())
         });
 
         (weights_ih, weights_ho)
@@ -112,50 +109,47 @@ impl Supervised<Matrix<f64>, Matrix<f64>> for NeuralNetwork {
                     of training labels");
         }
 
-        for i in 0..10000 {
+        // Signals into the hidden layer
+        let hidden_inputs = &self.weights_ih * xtr;
 
-            // Signals into the hidden layer
-            let hidden_inputs = &self.weights_ih * xtr;
+        // Signals emerging from the hidden layer
+        let hidden_ouputs = hidden_inputs.apply(&NeuralNetwork::sigmoid_activation);
 
-            // Signals emerging from the hidden layer
-            let hidden_ouputs = hidden_inputs.apply(&NeuralNetwork::sigmoid_activation);
+        // Signals into the output layer
+        let final_inputs = &self.weights_ho * &hidden_ouputs;
 
-            // Signals into the output layer
-            let final_inputs = &self.weights_ho * &hidden_ouputs;
+        // Signals emerging from the output layer
+        let final_outputs = final_inputs.apply(&NeuralNetwork::sigmoid_activation);
 
-            // Signals emerging from the output layer
-            let final_outputs = final_inputs.apply(&NeuralNetwork::sigmoid_activation);
+        // The error (element-wise difference) between the network output
+        // and the expected output
+        let output_errors = ytr - &final_outputs;
 
-            let output_errors = ytr - &final_outputs;
+        //println!("Current error: {}", output_errors.sum());
 
-            // The matrix that holds all of the weights between the hidden and
-            // output layer has dimensions `ouputs x hidden`. So, its transpose
-            // has dimensions `hidden x outputs`. Obviously, the matrix containing
-            // the error from the output layer has dimensions `outputs x 1`, so
-            // the matrix multiplication below results in a matrix with dimensions
-            // `hidden x 1`.
-            let hidden_errors = self.weights_ho.transpose() * &output_errors;
+        // The matrix that holds all of the weights between the hidden and
+        // output layer has dimensions `ouputs x hidden`. So, its transpose
+        // has dimensions `hidden x outputs`. Obviously, the matrix containing
+        // the error from the output layer has dimensions `outputs x 1`, so
+        // the matrix multiplication below results in a matrix with dimensions
+        // `hidden x 1`.
+        let hidden_errors = self.weights_ho.transpose() * &output_errors;
 
-            //println!("\nCurrent weights (hidden -> output):");
-            //println!("{}", self.weights_ho
-            if i % 100 == 0 {
-                println!("Iteration {}", i);
-                println!("\nError: {}", output_errors.sum());
-            }
+        //println!("\nCurrent weights (hidden -> output):");
+        //println!("{}", self.weights_ho
 
-            //Matrix::<f64>::ones(final_outputs.rows(), final_outputs.cols())
-            // Update the weights for the connections between the hidden layer
-            // and output layer
-            self.weights_ho += output_errors.elemul(&final_outputs).elemul(&(final_outputs * -1.0 + 1.0)) *
-                                hidden_ouputs.transpose() *
-                                self.learning_rate;
+        //Matrix::<f64>::ones(final_outputs.rows(), final_outputs.cols())
+        // Update the weights for the connections between the hidden layer
+        // and output layer
+        self.weights_ho += output_errors.elemul(&final_outputs).elemul(&(-final_outputs + 1.0)) *
+                            hidden_ouputs.transpose() *
+                            self.learning_rate;
 
-            self.weights_ih += hidden_errors.elemul(&hidden_ouputs).elemul(&(hidden_ouputs * -1.0 + 1.0)) *
-                                xtr.transpose() *
-                                self.learning_rate;
-            //println!("\nUpdated weights (hidden -> output):");
-            //println!("{}", self.weights_ho);
-        }
+        self.weights_ih += hidden_errors.elemul(&hidden_ouputs).elemul(&(-hidden_ouputs + 1.0)) *
+                            xtr.transpose() *
+                            self.learning_rate;
+        //println!("\nUpdated weights (hidden -> output):");
+        //println!("{}", self.weights_ho);
     }
 
     fn predict(&self, xte: &Matrix<f64>) -> Matrix<f64> {
