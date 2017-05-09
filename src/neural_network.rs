@@ -51,8 +51,8 @@ impl NeuralNetwork {
         let normal_ih = NeuralNetwork::create_normal_distribution(hidden);
         let normal_ho = NeuralNetwork::create_normal_distribution(outputs);
 
-        // Each entry w_ij represents the weight between the i-th neuron in the input
-        // layer and the j-th neuron in the hidden layer
+        // The i-th row of each weight matrix contains the weights along the
+        // connections that terminate at the i-th neuron in the next layer
         let weights_ih: Matrix<f64> = Matrix::from_fn(hidden, inputs, |_, _| {
             normal_ih.ind_sample(&mut rand::thread_rng())
         });
@@ -87,15 +87,13 @@ impl NeuralNetwork {
 
 impl Supervised<Matrix<f64>, Matrix<f64>> for NeuralNetwork {
     fn train(&mut self, xtr: &Matrix<f64>, ytr: &Matrix<f64>) {
-        // The training data should be formatted as a matrix where each
-        // column represents a single training example. So, the number of
-        // rows (features) in the training data matrix should equal the
-        // number of inputs to the neural network.
+        // Each training example `xtr` should be formatted as a column
+        // matrix. The number of rows (features) in each training example
+        // should equal the number of inputs to the neural network.
         //
-        // Likewise, the matrix containing all of the labels for the training
-        // data should have a column (label) for each training example. The
-        // number of rows in this matrix should equal the number of outputs
-        // produced by the neural network.
+        // Likewise, the each training label `ytr` should be a column
+        // matrix whose size equals the the number of outputs produced
+        // by the neural network.
         if xtr.rows() != self.inputs {
             panic!("The number of features in the provided training data
                     is not equal to the number of inputs to this network");
@@ -125,8 +123,6 @@ impl Supervised<Matrix<f64>, Matrix<f64>> for NeuralNetwork {
         // and the expected output
         let output_errors = ytr - &final_outputs;
 
-        //println!("Current error: {}", output_errors.sum());
-
         // The matrix that holds all of the weights between the hidden and
         // output layer has dimensions `ouputs x hidden`. So, its transpose
         // has dimensions `hidden x outputs`. Obviously, the matrix containing
@@ -135,12 +131,12 @@ impl Supervised<Matrix<f64>, Matrix<f64>> for NeuralNetwork {
         // `hidden x 1`.
         let hidden_errors = self.weights_ho.transpose() * &output_errors;
 
-        //println!("\nCurrent weights (hidden -> output):");
-        //println!("{}", self.weights_ho
-
-        //Matrix::<f64>::ones(final_outputs.rows(), final_outputs.cols())
         // Update the weights for the connections between the hidden layer
         // and output layer
+        //
+        // Remember that the weights are changed in the direction opposite
+        // the gradient, since the gradient always points in the direction
+        // of steepest ascent.
         self.weights_ho += output_errors.elemul(&final_outputs).elemul(&(-final_outputs + 1.0)) *
                             hidden_ouputs.transpose() *
                             self.learning_rate;
@@ -148,8 +144,6 @@ impl Supervised<Matrix<f64>, Matrix<f64>> for NeuralNetwork {
         self.weights_ih += hidden_errors.elemul(&hidden_ouputs).elemul(&(-hidden_ouputs + 1.0)) *
                             xtr.transpose() *
                             self.learning_rate;
-        //println!("\nUpdated weights (hidden -> output):");
-        //println!("{}", self.weights_ho);
     }
 
     fn predict(&self, xte: &Matrix<f64>) -> Matrix<f64> {

@@ -97,6 +97,11 @@ fn main() {
         ytr[[actual_class, 0]] = 0.99;
 
         ann.train(&(xtr.into_matrix()), &ytr);
+
+        if i % 1000 == 0 {
+            let mut wtr = Writer::from_file(format!("frames/frame_{}.csv", i)).unwrap();
+            ann.weights_ih.row(0).into_matrix().write_csv(&mut wtr).unwrap();
+        }
     }
 
     let mut score_card: Vec<u32> = Vec::new();
