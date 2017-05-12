@@ -1,4 +1,4 @@
-use rulinalg::matrix::{Matrix, BaseMatrix, BaseMatrixMut};
+use rulinalg::matrix::{Axes, Matrix, BaseMatrix, BaseMatrixMut};
 use rulinalg::vector::Vector;
 
 extern crate rand;
@@ -123,6 +123,10 @@ impl Supervised<Matrix<f64>, Matrix<f64>> for NeuralNetwork {
         // and the expected output
         let output_errors = ytr - &final_outputs;
 
+        let mut abs = output_errors.clone();
+        abs = abs.apply(&|x| { x.abs() });
+
+        println!("Error: {}", abs.mean(Axes::Row));
         // The matrix that holds all of the weights between the hidden and
         // output layer has dimensions `ouputs x hidden`. So, its transpose
         // has dimensions `hidden x outputs`. Obviously, the matrix containing
